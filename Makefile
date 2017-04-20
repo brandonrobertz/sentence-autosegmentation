@@ -1,6 +1,18 @@
+# Both are pre-set for using the gutenberg cleaned dataset
+# feel free to change them to use your own datasets
+GUTENBERG_ZIP=data/Gutenberg.zip
+DATA_FILES_DIR=data/Gutenberg/txt/
 
-gutenberg:
-	find data/Gutenberg/txt/ -type f -exec cat {} \; \
+gutenberg_unzip:
+	if ! [ -f ${GUTENBERG_ZIP} ]; then \
+		echo "You need to download the Gutenberg.zip file first";
+		echo "see this URL for more information & download link";
+		echo "http://web.eecs.umich.edu/~lahiri/gutenberg_dataset.html";
+	fi
+	unzip -d data ${GUTENBERG_ZIP}
+
+build_trainingset:
+	find ${DATA_FILES_DIR} -type f -exec cat {} \; \
 		| grep -v '^\s*$$' \
 		| sed 's/\[.*\]//g' \
 		| tr [:upper:] [:lower:] \
@@ -9,4 +21,4 @@ gutenberg:
 		| sed 's/\s\+/ /g' \
 		| ./bin/sentence_tokenize.py \
 		| tr -d \. \
-		> data/gutenberg.cleaned
+		> data/dataset.sentences
