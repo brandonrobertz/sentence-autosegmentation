@@ -14,6 +14,12 @@ And turn it into this:
     the time is night
     and the business of the moment is dancing
 
+## Model Training
+
+Just run `classification.py [dataset/location]` and it will
+load the specified dataset, vectorize it (character-model),
+train, test, and save a model.
+
 ## Dataset Creation
 
 Training set comes from a pre-cleaned subset of the Gutenberg corpus.
