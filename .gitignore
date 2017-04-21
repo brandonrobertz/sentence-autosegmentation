@@ -4,3 +4,4 @@ venv
 README.html
 models/*
 *~
+graph/

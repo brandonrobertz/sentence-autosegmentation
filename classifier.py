@@ -27,6 +27,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Embedding
 from keras.layers import LSTM
 from keras.datasets import imdb
+from keras.callbacks import TensorBoard
 
 import numpy as np
 import sys
@@ -126,6 +127,13 @@ x_train, x_test, y_train, y_test = train_test()
 #x_train, x_test, y_train, y_test = load_train_test()
 print('x_train[0]', x_train[0], x_train[0].shape, 'x_train', x_train.shape)
 
+tbCallBack = TensorBoard(
+    log_dir='./graph',
+    histogram_freq=0,
+    write_graph=True,
+    write_images=True
+)
+
 print('Build model...')
 model = Sequential()
 # 256 character-space (ascii only)
@@ -147,12 +155,17 @@ model.compile(loss='binary_crossentropy',
               metrics=['binary_accuracy'])
 
 print('Train...')
-model.fit(x_train, y_train,
-          batch_size=batch_size,
-          epochs=15,
-          validation_data=(x_test, y_test))
-score, acc = model.evaluate(x_test, y_test,
-                            batch_size=batch_size)
+model.fit(
+    x_train, y_train,
+    batch_size=batch_size,
+    epochs=5,
+    validation_data=(x_test, y_test),
+    callbacks=[tbCallBack]
+)
+score, acc = model.evaluate(
+    x_test, y_test,
+    batch_size=batch_size
+)
 
 print('Saving model')
 now = time.mktime(datetime.datetime.now().timetuple())

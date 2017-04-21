@@ -30,3 +30,6 @@ downsample:
 
 train_test:
 	./classifier.py data/dataset.downsampled
+
+tensorboard:
+	tensorboard --logdir ./graph
