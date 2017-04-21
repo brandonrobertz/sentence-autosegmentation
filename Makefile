@@ -22,3 +22,11 @@ build_trainingset:
 		| ./bin/sentence_tokenize.py \
 		| tr -d \. \
 		> data/dataset.sentences
+
+downsample:
+	cat data/dataset.sentences \
+		| ./bin/downsample.py \
+		> data/dataset.downsampled
+
+train_test:
+	./classifier.py data/dataset.downsampled
