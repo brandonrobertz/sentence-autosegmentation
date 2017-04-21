@@ -31,6 +31,8 @@ from keras.datasets import imdb
 import numpy as np
 import sys
 import cPickle as pickle
+import datetime
+import time
 
 
 # window sizes in chars
@@ -152,6 +154,10 @@ model.fit(x_train, y_train,
 score, acc = model.evaluate(x_test, y_test,
                             batch_size=batch_size)
 
+print('Saving model')
+now = time.mktime(datetime.datetime.now().timetuple())
+model.save('models/{}.h5'.format(now))
+
 print('Test score:', score)
 print('Test accuracy:', acc)
 
@@ -159,3 +165,4 @@ print('Testing on known input (should be line break) [1]')
 print(model.predict_proba(np.array([[115,  32,  97, 108, 108,  32, 111, 102, 102, 105]], dtype='uint8')))
 print('Should be a non-line break [0]')
 print(model.predict_proba(np.array([[116, 104, 101,  32, 102, 114, 111, 122, 101, 110]], dtype='uint8')))
+

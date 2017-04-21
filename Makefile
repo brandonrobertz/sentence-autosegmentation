@@ -20,7 +20,7 @@ build_trainingset:
 		| sed "s/[^a-z0-9\s'\.\?\!]/ /g" \
 		| sed 's/\s\+/ /g' \
 		| ./bin/sentence_tokenize.py \
-		| tr -d \. \
+		| tr -d '.!?' \
 		> data/dataset.sentences
 
 downsample:
