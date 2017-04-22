@@ -27,19 +27,21 @@ from keras.models import Sequential
 from keras.layers import Dense, Embedding
 from keras.layers import LSTM
 from keras.datasets import imdb
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, ModelCheckpoint
 
 import numpy as np
 import sys
 import cPickle as pickle
 import datetime
 import time
+import os
 
 
 # window sizes in chars
-window_size = 10
-window_step = 5
-batch_size = 1024 * 3
+window_size = 20
+window_step = 10
+batch_size = 1024
+epochs = 3
 
 
 def train_test():
@@ -122,16 +124,25 @@ def load_train_test():
     return x_train, x_test, y_train, y_test
 
 
+def modelname():
+    now = time.mktime(datetime.datetime.now().timetuple())
+    return '{}.h5'.format(now)
+
+
 x_train, x_test, y_train, y_test = train_test()
 # save_train_test(x_train, x_test, y_train, y_test)
 #x_train, x_test, y_train, y_test = load_train_test()
 print('x_train[0]', x_train[0], x_train[0].shape, 'x_train', x_train.shape)
 
-tbCallBack = TensorBoard(
+tbCallback = TensorBoard(
     log_dir='./graph',
     histogram_freq=0,
     write_graph=True,
     write_images=True
+)
+checkpointCallback = ModelCheckpoint(
+    os.path.abspath('.') + '/models/weights.{epoch:02d}-{val_loss:.2f}.hdf5',
+    save_best_only = False
 )
 
 print('Build model...')
@@ -158,24 +169,17 @@ print('Train...')
 model.fit(
     x_train, y_train,
     batch_size=batch_size,
-    epochs=5,
+    epochs=epochs,
     validation_data=(x_test, y_test),
-    callbacks=[tbCallBack]
+    callbacks=[tbCallback, checkpointCallback]
 )
 score, acc = model.evaluate(
     x_test, y_test,
     batch_size=batch_size
 )
 
-print('Saving model')
-now = time.mktime(datetime.datetime.now().timetuple())
-model.save('models/{}.h5'.format(now))
+print('Saving Keras model')
+model.save(os.path.abspath('.') + '/models/' + modelname())
 
 print('Test score:', score)
 print('Test accuracy:', acc)
-
-print('Testing on known input (should be line break) [1]')
-print(model.predict_proba(np.array([[115,  32,  97, 108, 108,  32, 111, 102, 102, 105]], dtype='uint8')))
-print('Should be a non-line break [0]')
-print(model.predict_proba(np.array([[116, 104, 101,  32, 102, 114, 111, 122, 101, 110]], dtype='uint8')))
-

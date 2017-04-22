@@ -5,9 +5,9 @@ import fileinput
 
 
 # only keep this pct of the sentences (keeping the edges)
-DOWNSAMPLE_PCT = 0.15
+DOWNSAMPLE_PCT = 0.25
 # keep maximum chars from end/start of sentences
-MAX_SIZE = 15
+MAX_SIZE = 35
 
 
 for line in fileinput.input():
