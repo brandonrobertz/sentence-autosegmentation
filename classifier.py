@@ -159,10 +159,6 @@ model.add(Dense(1, activation='sigmoid'))
 # try using different optimizers and different optimizer configs
 model.compile(loss='binary_crossentropy',
               optimizer='adam',
-              # penalize the model for outputting False incorrectly
-              # since we have imbalanced data (sentence breaks are
-              # much more rare than sentence content)
-              #loss_weights={'False': 4.0, 'True': 1.0},
               metrics=['binary_accuracy'])
 
 print('Train...')
