@@ -3,7 +3,14 @@
 GUTENBERG_ZIP=data/Gutenberg.zip
 DATA_FILES_DIR=data/Gutenberg/txt/
 
-gutenberg_unzip:
+default:gutenberg_unzip build_trainingset downsample train_test
+
+dirs:
+	mkdir -p data
+	mkdir -p models
+	mkdir -p graph
+
+gutenberg_unzip: dirs
 	if ! [ -f ${GUTENBERG_ZIP} ]; then \
 		echo "You need to download the Gutenberg.zip file first";
 		echo "see this URL for more information & download link";

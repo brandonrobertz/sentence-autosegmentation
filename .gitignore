@@ -1,7 +1,7 @@
-data/
+data/*
 .*.swp
 venv
 README.html
 models/*
 *~
-graph/
+graph/*
