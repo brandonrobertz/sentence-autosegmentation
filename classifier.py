@@ -55,7 +55,7 @@ def train_test():
     X = np.zeros(shape=(N, window_size), dtype='uint8')
     y = np.zeros(shape=(N, 1), dtype='uint8')
 
-    print(len(data), 'bytes')
+    # print(len(data), 'bytes')
 
     space = " " * 5
     data_ix = 0
@@ -149,10 +149,10 @@ print('Build model...')
 model = Sequential()
 # 256 character-space (ascii only)
 model.add(Embedding(
-    256, 100, input_length=window_size
+    256, 150, input_length=window_size
 ))
 model.add(LSTM(
-    1024, dropout=0.2, recurrent_dropout=0.2
+    1024*2, dropout=0.2, recurrent_dropout=0.2
 ))
 model.add(Dense(1, activation='sigmoid'))
 

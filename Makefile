@@ -3,7 +3,7 @@
 GUTENBERG_ZIP=data/Gutenberg.zip
 DATA_FILES_DIR=data/Gutenberg/txt/
 
-default: gutenberg_unzip build_trainingset downsample train_test
+default: gutenberg_unzip trainingset train_test
 
 dirs:
 	mkdir -p data
@@ -18,6 +18,8 @@ gutenberg_unzip: dirs
 	fi
 	unzip -d data ${GUTENBERG_ZIP}
 
+trainingset: build_trainingset downsample_trainingset
+
 build_trainingset:
 	find ${DATA_FILES_DIR} -type f -exec cat {} \; \
 		| grep -v '^\s*$$' \
@@ -30,6 +32,11 @@ build_trainingset:
 		| tr -d '.!?' \
 		> data/dataset.sentences
 
+downsample_trainingset:
+	cat data/dataset.sentences \
+		| ./bin/downsample.py \
+		> data/dataset.downsampled
+
 build_validation_set:
 	cat data/validation.raw \
 		| grep -v '^\s*$$' \
@@ -40,15 +47,10 @@ build_validation_set:
 		| sed 's/\s\+/ /g' \
 		| ./bin/sentence_tokenize.py \
 		| tr -d '.!?' \
-		> data/validate.sentences
+		> data/validation.sentences
 	cat data/validation.sentences \
 		| ./bin/downsample.py \
 		> data/validation.downsampled
-
-downsample:
-	cat data/dataset.sentences \
-		| ./bin/downsample.py \
-		> data/dataset.downsampled
 
 train_test:
 	./classifier.py data/dataset.downsampled

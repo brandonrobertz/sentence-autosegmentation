@@ -37,6 +37,7 @@ epochs = 3
 
 model_file = sys.argv[1]
 text_file = sys.argv[2]
+print('Using model', model_file, 'and text corpus', text_file)
 
 def Xy(text_file):
     print('Loading data...')
