@@ -3,7 +3,7 @@
 GUTENBERG_ZIP=data/Gutenberg.zip
 DATA_FILES_DIR=data/Gutenberg/txt/
 
-default:gutenberg_unzip build_trainingset downsample train_test
+default: gutenberg_unzip build_trainingset downsample train_test
 
 dirs:
 	mkdir -p data
@@ -41,6 +41,9 @@ build_validation_set:
 		| ./bin/sentence_tokenize.py \
 		| tr -d '.!?' \
 		> data/validate.sentences
+	cat data/validation.sentences \
+		| ./bin/downsample.py \
+		> data/validation.downsampled
 
 downsample:
 	cat data/dataset.sentences \

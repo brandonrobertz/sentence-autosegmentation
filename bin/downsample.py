@@ -1,36 +1,31 @@
 #!/usr/bin/env python2
+""" TODO: write a config-finding tool that finds a
+sentence length that optimizes equal training set
+balance (windows with breaks vs windows w/o)
+"""
 from __future__ import print_function
 
 import fileinput
 
 
-# only keep this pct of the sentences (keeping the edges)
-DOWNSAMPLE_PCT = 0.25
 # keep maximum chars from end/start of sentences
-MAX_SENTENCE_LEN = 80
+MAX_SENTENCE_LEN = 40
 
 
 for line in fileinput.input():
     print('-'*50)
     line = line.replace('\n', '').replace('\r', '')
-    print('WHOLE LINE:', line)
 
     if len(line) > MAX_SENTENCE_LEN:
-        part = int(len(line)*DOWNSAMPLE_PCT)
-        s_part = int(part / 2)
+        part = int(MAX_SENTENCE_LEN / 2)
 
         # print('LEN:', len(line))
         # if s_part > MAX_SIZE:
         #     s_part = MAX_SIZE
 
-        e_part = s_part
+        line_start = line[:part]
 
-        line_start = line[:s_part]
-        print('LINE START:', s_part, line_start)
-
-        line_end = line[-e_part:]
-        print('LINE END:', e_part, line_end)
-
+        line_end = line[part:]
         line = line_start + line_end
 
-    print('OUTPUT:', line)
+    print(line)
