@@ -35,11 +35,13 @@ window_step = 10
 batch_size = 1024
 epochs = 3
 
+model_file = sys.argv[1]
+text_file = sys.argv[2]
 
-def Xy():
+def Xy(text_file):
     print('Loading data...')
 
-    f = open(sys.argv[2], 'r')
+    f = open(text_file, 'r')
     data = f.read()
     total = len(data)
 
@@ -83,10 +85,10 @@ def Xy():
     return X, y
 
 
-X, y = Xy()
+X, y = Xy(text_file)
 
 print('Loading model...')
-model = load_model(sys.argv[1])
+model = load_model(model_file)
 
 print('Running...')
 score, acc = model.evaluate(
