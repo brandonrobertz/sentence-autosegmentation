@@ -1,1 +1,4 @@
-nltk
+h5py==2.7.0
+Keras==2.0.3
+numpy==1.12.1
+tensorflow-gpu==1.0.1

@@ -30,6 +30,18 @@ build_trainingset:
 		| tr -d '.!?' \
 		> data/dataset.sentences
 
+build_validation_set:
+	cat data/validation.raw \
+		| grep -v '^\s*$$' \
+		| sed 's/\[.*\]//g' \
+		| tr [:upper:] [:lower:] \
+		| tr '-' ' ' \
+		| sed "s/[^a-z0-9\s'\.\?\!]/ /g" \
+		| sed 's/\s\+/ /g' \
+		| ./bin/sentence_tokenize.py \
+		| tr -d '.!?' \
+		> data/validate.sentences
+
 downsample:
 	cat data/dataset.sentences \
 		| ./bin/downsample.py \
