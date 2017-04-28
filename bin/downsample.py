@@ -11,7 +11,7 @@ import fileinput
 
 
 # keep maximum chars from end/start of sentences
-MAX_SENTENCE_LEN = 80
+MAX_SENTENCE_LEN = 79
 
 
 for line in fileinput.input():

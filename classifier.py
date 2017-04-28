@@ -24,8 +24,8 @@ from __future__ import print_function
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding
-from keras.layers import LSTM
+from keras.layers import Dense, Embedding, LSTM
+from keras.optimizers import Adam
 from keras.datasets import imdb
 from keras.callbacks import TensorBoard, ModelCheckpoint
 
@@ -38,13 +38,16 @@ import os
 
 
 # window sizes in chars
+multiclass = True
 window_size = 20
 window_step = 10
-batch_size = 1024
-epochs = 3
+batch_size = 512
+lstm_size = 4000
+embedding_size = 200
+epochs = 5
 
 
-def train_test():
+def train_test(multiclass=False):
     print('Loading data...')
 
     f = open(sys.argv[1], 'r')
@@ -52,18 +55,42 @@ def train_test():
     total = len(data)
 
     N = int(len(data)/window_step)
+    if multiclass:
+        new_N = 0
+        data_ix = 0
+        for i in range(N):
+            chunk = data[data_ix:data_ix+window_size]
+            # print(chunk.replace('\n', '\\n'))
+            data_ix += window_step
+            if multiclass and ("\n" not in chunk):
+                continue
+            new_N += 1
+        print('old N', N, 'new N', new_N)
+        N = new_N
+
     X = np.zeros(shape=(N, window_size), dtype='uint8')
-    y = np.zeros(shape=(N, 1), dtype='uint8')
+    if not multiclass:
+        y = np.zeros(shape=(N, 1), dtype='uint8')
+    else:
+        y = np.zeros(shape=(N, window_size), dtype='uint8')
 
     # print(len(data), 'bytes')
 
     space = " " * 5
     data_ix = 0
-    for i in range(N):
+    i = 0
+    while i < N:
         chunk = data[data_ix:data_ix+window_size]
         # print(chunk.replace('\n', '\\n'))
+        if multiclass and "\n" not in chunk:
+            data_ix += window_step
+            continue
 
-        y[i] = 1 if "\n" in chunk else 0
+        if not multiclass:
+            y[i] = 1 if "\n" in chunk else 0
+        else:
+            y[i][chunk.index("\n")] = 1
+
         # print('y[', i, '] =', y[i])
 
         for j in range(window_size):
@@ -81,6 +108,7 @@ def train_test():
             X[i][j] = o
 
         data_ix += window_step
+        i += 1
 
         if data_ix % 100000 == 0:
             done = (float(data_ix) / total) * 100
@@ -96,47 +124,67 @@ def train_test():
 
     n_true = y.sum()
     n_false = y.shape[0] - n_true
-    print('True', n_true, 'False', n_false, '%', float(n_true) / n_false)
+
+    if not multiclass:
+        print('True', n_true, 'False', n_false, '%', float(n_true) / n_false)
     del data; del X; del y
 
     return x_train, x_test, y_train, y_test
 
 
-def save_train_test(x_train, x_test, y_train, y_test):
-    print('saving data...')
-    with open('data.pickle', 'w') as f:
-        pickle.dump({
-            "x_train": x_train,
-            "x_test": x_test,
-            "y_train": y_train,
-            "y_test": y_test
-        }, f)
-
-
-def load_train_test():
-    print('loading data...')
-    with open('data.pickle', 'r') as f:
-        data = pickle.load(f)
-    x_train = data["x_train"]
-    x_test  = data["x_test"]
-    y_train = data["y_train"]
-    y_test  = data["y_test"]
-    return x_train, x_test, y_train, y_test
-
-
-def modelname():
+def modelname(embedding, lstm, val_acc):
     now = time.mktime(datetime.datetime.now().timetuple())
-    return '{}.h5'.format(now)
+    return '{}_{}_{}_{}.h5'.format(embedding, lstm, val_acc, int(now))
 
 
-x_train, x_test, y_train, y_test = train_test()
-# save_train_test(x_train, x_test, y_train, y_test)
-#x_train, x_test, y_train, y_test = load_train_test()
-print('x_train[0]', x_train[0], x_train[0].shape, 'x_train', x_train.shape)
+def binary_model():
+    print('Building model...')
+    model = Sequential()
+    # 256 character-space (ascii only)
+    # best was lstm 2000, embedding 200
+    model.add(Embedding(
+        256, embedding_size, input_length=window_size
+    ))
+    model.add(LSTM(
+        lstm_size, dropout=0.1, recurrent_dropout=0.1
+    ))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy',
+                optimizer='adam',
+                metrics=['binary_accuracy'])
+    return model
 
+
+def multiclass_model():
+    print('Building model...')
+    model = Sequential()
+    # 256 character-space (ascii only)
+    model.add(Embedding(
+        256, embedding_size, input_length=window_size
+    ))
+    model.add(LSTM(
+        2000, dropout=0.2, recurrent_dropout=0.2
+    ))
+    model.add(Dense(window_size, activation='sigmoid'))
+    model.compile(loss='categorical_crossentropy',
+                optimizer='adam',
+                metrics=['categorical_accuracy'])
+    return model
+
+
+x_train, x_test, y_train, y_test = train_test(multiclass=multiclass)
+print('x_train shape', x_train.shape, 'y_train shape', y_train.shape)
+print('x_train[0]', x_train[0], 'shape', x_train[0].shape)
+print('y_train[0]', y_train[0], 'shape', y_train[0].shape)
+
+if multiclass:
+    model = multiclass_model()
+else:
+    model = binary_model()
+
+print('Building model...')
 tbCallback = TensorBoard(
     log_dir='./graph',
-    histogram_freq=0,
     write_graph=True,
     write_images=True
 )
@@ -145,23 +193,7 @@ checkpointCallback = ModelCheckpoint(
     save_best_only = False
 )
 
-print('Build model...')
-model = Sequential()
-# 256 character-space (ascii only)
-model.add(Embedding(
-    256, 150, input_length=window_size
-))
-model.add(LSTM(
-    1024*2, dropout=0.2, recurrent_dropout=0.2
-))
-model.add(Dense(1, activation='sigmoid'))
-
-# try using different optimizers and different optimizer configs
-model.compile(loss='binary_crossentropy',
-              optimizer='adam',
-              metrics=['binary_accuracy'])
-
-print('Train...')
+print('Training ...')
 model.fit(
     x_train, y_train,
     batch_size=batch_size,
@@ -175,7 +207,8 @@ score, acc = model.evaluate(
 )
 
 print('Saving Keras model')
-model.save(os.path.abspath('.') + '/models/' + modelname())
+model.save(os.path.abspath('.') + '/models/' + modelname(
+    embedding_size, lstm_size, acc))
 
 print('Test score:', score)
 print('Test accuracy:', acc)

@@ -5,3 +5,5 @@ README.html
 models/*
 *~
 graph/*
+graph_*
+*.pickle
