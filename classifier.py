@@ -24,10 +24,11 @@ from __future__ import print_function
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM
+from keras.layers import Dense, Embedding, LSTM, GRU
 from keras.optimizers import Adam
 from keras.datasets import imdb
 from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras_diagram import ascii
 
 import numpy as np
 import sys
@@ -38,13 +39,14 @@ import os
 
 
 # window sizes in chars
-multiclass = True
+multiclass = False
+# multiclass = True
 window_size = 20
 window_step = 10
 batch_size = 512
-lstm_size = 4000
-embedding_size = 200
-epochs = 5
+lstm_size = 2500
+embedding_size = 250
+epochs = 10
 
 
 def train_test(multiclass=False):
@@ -132,9 +134,11 @@ def train_test(multiclass=False):
     return x_train, x_test, y_train, y_test
 
 
-def modelname(embedding, lstm, val_acc):
+def modelname(embedding, lstm, val_acc, multiclass):
     now = time.mktime(datetime.datetime.now().timetuple())
-    return '{}_{}_{}_{}.h5'.format(embedding, lstm, val_acc, int(now))
+    return '{}_{}_{}_{}_{}.h5'.format(
+        'multiclass' if multiclass else 'binary',
+        embedding, lstm, val_acc, int(now))
 
 
 def binary_model():
@@ -143,15 +147,18 @@ def binary_model():
     # 256 character-space (ascii only)
     # best was lstm 2000, embedding 200
     model.add(Embedding(
-        256, embedding_size, input_length=window_size
+        256, 250, input_length=window_size
     ))
-    model.add(LSTM(
-        lstm_size, dropout=0.1, recurrent_dropout=0.1
+    model.add(GRU(
+        2500,
+        dropout=0.2, recurrent_dropout=0.2
     ))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy',
                 optimizer='adam',
                 metrics=['binary_accuracy'])
+    print( '-' * 20, 'Binary Model', '-' * 20)
+    print(ascii(model))
     return model
 
 
@@ -169,46 +176,50 @@ def multiclass_model():
     model.compile(loss='categorical_crossentropy',
                 optimizer='adam',
                 metrics=['categorical_accuracy'])
+    print(ascii(model))
     return model
 
 
-x_train, x_test, y_train, y_test = train_test(multiclass=multiclass)
-print('x_train shape', x_train.shape, 'y_train shape', y_train.shape)
-print('x_train[0]', x_train[0], 'shape', x_train[0].shape)
-print('y_train[0]', y_train[0], 'shape', y_train[0].shape)
+if __name__ == "__main__":
+    x_train, x_test, y_train, y_test = train_test(multiclass=multiclass)
+    print('x_train shape', x_train.shape, 'y_train shape', y_train.shape)
+    print('x_train[0]', x_train[0], 'shape', x_train[0].shape)
+    print('y_train[0]', y_train[0], 'shape', y_train[0].shape)
 
-if multiclass:
-    model = multiclass_model()
-else:
-    model = binary_model()
+    if multiclass:
+        model = multiclass_model()
+    else:
+        model = binary_model()
 
-print('Building model...')
-tbCallback = TensorBoard(
-    log_dir='./graph',
-    write_graph=True,
-    write_images=True
-)
-checkpointCallback = ModelCheckpoint(
-    os.path.abspath('.') + '/models/weights.{epoch:02d}-{val_loss:.2f}.hdf5',
-    save_best_only = False
-)
+    print('Building model...')
+    tbCallback = TensorBoard(
+        log_dir='./graph',
+        write_graph=True,
+        write_images=True
+    )
+    checkpointCallback = ModelCheckpoint(
+        os.path.abspath('.') + '/models/weights.{epoch:02d}-{val_loss:.2f}.hdf5',
+        save_best_only = False
+    )
 
-print('Training ...')
-model.fit(
-    x_train, y_train,
-    batch_size=batch_size,
-    epochs=epochs,
-    validation_data=(x_test, y_test),
-    callbacks=[tbCallback, checkpointCallback]
-)
-score, acc = model.evaluate(
-    x_test, y_test,
-    batch_size=batch_size
-)
+    print('Training ...')
+    model.fit(
+        x_train, y_train,
+        batch_size=batch_size,
+        epochs=epochs,
+        validation_data=(x_test, y_test),
+        callbacks=[tbCallback, checkpointCallback]
+    )
+    score, acc = model.evaluate(
+        x_test, y_test,
+        batch_size=batch_size
+    )
 
-print('Saving Keras model')
-model.save(os.path.abspath('.') + '/models/' + modelname(
-    embedding_size, lstm_size, acc))
+    print('Saving Keras model')
+    model.save(os.path.abspath('.') + '/models/' + modelname(
+        embedding_size, lstm_size, acc, multiclass))
 
-print('Test score:', score)
-print('Test accuracy:', acc)
+    print('\n', '+' * 20, 'Results', '+' * 20)
+    print(ascii(model))
+    print('Test score:', score)
+    print('Test accuracy:', acc)
