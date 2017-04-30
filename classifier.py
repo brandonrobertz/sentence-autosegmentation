@@ -49,10 +49,10 @@ embedding_size = 250
 epochs = 10
 
 
-def train_test(multiclass=False):
+def train_test(filename=None, multiclass=False):
     print('Loading data...')
 
-    f = open(sys.argv[1], 'r')
+    f = open(filename or sys.argv[1], 'r')
     data = f.read()
     total = len(data)
 
@@ -131,7 +131,7 @@ def train_test(multiclass=False):
         print('True', n_true, 'False', n_false, '%', float(n_true) / n_false)
     del data; del X; del y
 
-    return x_train, x_test, y_train, y_test
+    return x_train, y_train, x_test, y_test
 
 
 def modelname(embedding, lstm, val_acc, multiclass):
@@ -181,7 +181,7 @@ def multiclass_model():
 
 
 if __name__ == "__main__":
-    x_train, x_test, y_train, y_test = train_test(multiclass=multiclass)
+    x_train, y_train, x_test, y_test = train_test(multiclass=multiclass)
     print('x_train shape', x_train.shape, 'y_train shape', y_train.shape)
     print('x_train[0]', x_train[0], 'shape', x_train[0].shape)
     print('y_train[0]', y_train[0], 'shape', y_train[0].shape)
