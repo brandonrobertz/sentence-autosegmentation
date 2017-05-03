@@ -24,7 +24,7 @@ from __future__ import print_function
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM, GRU
+from keras.layers import * #Dense, Embedding, LSTM, Flatten
 from keras.optimizers import Adam
 from keras.datasets import imdb
 from keras.callbacks import TensorBoard, ModelCheckpoint
@@ -36,6 +36,7 @@ import cPickle as pickle
 import datetime
 import time
 import os
+import random
 
 
 # window sizes in chars
@@ -43,20 +44,49 @@ multiclass = False
 # multiclass = True
 window_size = 20
 window_step = 10
-batch_size = 512
-lstm_size = 2500
+batch_size = 1024
+lstm_size = 1500
 embedding_size = 250
 epochs = 10
 
 
-def train_test(filename=None, multiclass=False):
+def train_test(filename=None, multiclass=False, balance=True):
     print('Loading data...')
 
     f = open(filename or sys.argv[1], 'r')
     data = f.read()
     total = len(data)
-
     N = int(len(data)/window_step)
+
+    # balancing classes via downsampling larger class
+    larger_class = None
+    remove_items = 0
+    if balance and not multiclass:
+        print("Pre-calculating class balance requirements")
+        total_True = 0
+        total_False = 0
+        data_ix = 0
+        for i in range(N):
+            chunk = data[data_ix:data_ix+window_size]
+            data_ix += window_step
+            if "\n" in chunk:
+                total_True += 1
+            else:
+                total_False += 1
+        if total_True > total_False:
+            larger_class = 'True'
+        elif total_True < total_False:
+            larger_class = 'False'
+        if larger_class is not None:
+            remove_items = abs(total_True - total_False)
+            N -= remove_items
+        print( "T\t", total_True)
+        print( "F\t", total_False)
+        if larger_class is not None:
+            print("R\t", remove_items)
+            print("C\t", larger_class)
+
+    # in multiclass we only use windows containing breaks
     if multiclass:
         new_N = 0
         data_ix = 0
@@ -70,26 +100,40 @@ def train_test(filename=None, multiclass=False):
         print('old N', N, 'new N', new_N)
         N = new_N
 
+    print("Building zeroed matrices")
     X = np.zeros(shape=(N, window_size), dtype='uint8')
     if not multiclass:
         y = np.zeros(shape=(N, 1), dtype='uint8')
     else:
         y = np.zeros(shape=(N, window_size), dtype='uint8')
 
-    # print(len(data), 'bytes')
-
+    print("Beginning data vectorization")
     space = " " * 5
     data_ix = 0
     i = 0
     while i < N:
         chunk = data[data_ix:data_ix+window_size]
+
+        y_value = "\n" in chunk
+
         # print(chunk.replace('\n', '\\n'))
-        if multiclass and "\n" not in chunk:
+        if multiclass and not y_value:
             data_ix += window_step
             continue
 
+        # only balance for binary classification (for now)
+        if balance and str(y_value) == larger_class and remove_items > 0:
+            # spread the downsampling out across the whole dataset
+            if random.randint(0, int(N / 2)) < int(N / 2):
+                # TODO: try skipping randomly throughout
+                data_ix += window_step
+                remove_items -= 1
+                if remove_items == 0:
+                    print("Classes balanced at", i)
+                continue
+
         if not multiclass:
-            y[i] = 1 if "\n" in chunk else 0
+            y[i] = 1 if y_value else 0
         else:
             y[i][chunk.index("\n")] = 1
 
@@ -147,19 +191,76 @@ def binary_model():
     # 256 character-space (ascii only)
     # best was lstm 2000, embedding 200
     model.add(Embedding(
-        256, 250, input_length=window_size
+        128, 100, input_length=window_size
     ))
-    model.add(GRU(
-        2500,
+    model.add(LSTM(
+        2000,
         dropout=0.2, recurrent_dropout=0.2
     ))
+    # model.add(Dense(
+        # 200,
+        # activation='sigmoid',
+        # kernel_regularizer='l1_l2',
+        # activity_regularizer='l1_l2'
+    # ))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy',
-                optimizer='adam',
+                optimizer=Adam(lr=0.002),
                 metrics=['binary_accuracy'])
     print( '-' * 20, 'Binary Model', '-' * 20)
     print(ascii(model))
     return model
+
+
+def binary_model_conv_lstm():
+    print('Building model...')
+    embedding=100
+    model = Sequential()
+
+    # character-embeddings
+    model.add(Embedding(
+        128, embedding, input_length=window_size
+    ))
+
+    # reshape into 4D tensor (samples, 1, maxlen, 256)
+    #model.add(Reshape((3, embedding, window_size)))
+    #model.add(Reshape((3, window_size, embedding)))
+
+    # VGG-like convolution stack
+    model.add(Convolution1D(
+        filters=32,
+        kernel_size=3,
+        input_shape=(3, window_size, embedding)
+    ))
+    model.add(Activation('relu'))
+    # model.add(Convolution2D(filters=32, kernel_size=32))
+    # model.add(Activation('relu'))
+    model.add(MaxPooling2D(poolsize=(2, 2)))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+
+
+    # 256 character-space (ascii only)
+    # best was lstm 2000, embedding 200
+    model.add(LSTM(
+        2000,
+        dropout=0.2, recurrent_dropout=0.2
+    ))
+    # model.add(Dense(
+        # 200,
+        # activation='sigmoid',
+        # kernel_regularizer='l1_l2',
+        # activity_regularizer='l1_l2'
+    # ))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy',
+                optimizer=Adam(), #lr=0.01),
+                metrics=['binary_accuracy'])
+    print( '-' * 20, 'Binary Model', '-' * 20)
+    print(ascii(model))
+    return model
+
+
 
 
 def multiclass_model():
@@ -167,7 +268,7 @@ def multiclass_model():
     model = Sequential()
     # 256 character-space (ascii only)
     model.add(Embedding(
-        256, embedding_size, input_length=window_size
+        128, embedding_size, input_length=window_size
     ))
     model.add(LSTM(
         2000, dropout=0.2, recurrent_dropout=0.2
@@ -181,7 +282,8 @@ def multiclass_model():
 
 
 if __name__ == "__main__":
-    x_train, y_train, x_test, y_test = train_test(multiclass=multiclass)
+    x_train, y_train, x_test, y_test = train_test(
+        multiclass=multiclass, balance=not multiclass)
     print('x_train shape', x_train.shape, 'y_train shape', y_train.shape)
     print('x_train[0]', x_train[0], 'shape', x_train[0].shape)
     print('y_train[0]', y_train[0], 'shape', y_train[0].shape)
@@ -189,6 +291,7 @@ if __name__ == "__main__":
     if multiclass:
         model = multiclass_model()
     else:
+        # model = binary_model_conv_lstm() # binary_model()
         model = binary_model()
 
     print('Building model...')

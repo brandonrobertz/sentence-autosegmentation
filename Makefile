@@ -3,7 +3,7 @@
 GUTENBERG_ZIP=data/Gutenberg.zip
 DATA_FILES_DIR=data/Gutenberg/txt/
 
-default: gutenberg_unzip trainingset train_test
+default: gutenberg_unzip build_trainingset train_test
 
 dirs:
 	mkdir -p data
@@ -53,7 +53,7 @@ build_validation_set:
 		> data/validation.downsampled
 
 train_test:
-	./classifier.py data/dataset.downsampled
+	./classifier.py data/dataset.sentences
 
 tensorboard:
 	tensorboard --logdir ./graph
