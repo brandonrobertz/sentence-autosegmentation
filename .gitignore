@@ -7,3 +7,4 @@ models/*
 graph/*
 graph_*
 *.pickle
+*.pyc
