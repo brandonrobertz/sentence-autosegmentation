@@ -113,6 +113,7 @@ def gen_training_data(filename=None,
     #       ,..
 
     EOF = False
+    total = 0
     while not EOF:
         X = np.zeros(shape=(batch_size, window_size), dtype='uint8')
         if not multiclass:
@@ -174,9 +175,10 @@ def gen_training_data(filename=None,
                 X[batch_i][j] = o
 
             batch_i += 1
+            total += 1
 
-        # done = (float(data_ix) / total) * 100
-        # print("Completed: %0.3f%%%s" % (done, space), end='\r')
+        if total % 100 == 0:
+            print("Processed: %s Imbal: %s" % (total, remove_items), end='\r')
 
         yield X, y
 

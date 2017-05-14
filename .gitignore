@@ -8,3 +8,5 @@ graph/*
 graph_*
 *.pickle
 *.pyc
+*.err
+*.log

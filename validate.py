@@ -28,74 +28,58 @@ import numpy as np
 import sys
 import os
 
+from models import binary_model, multiclass_model
+
 
 # window sizes in chars
-window_size = 20
-window_step = 10
-batch_size = 1024
-epochs = 3
-
-model_file = sys.argv[1]
-text_file = sys.argv[2]
-print('Using model', model_file, 'and text corpus', text_file)
-
-def Xy(text_file):
-    print('Loading data...')
-
-    f = open(text_file, 'r')
-    data = f.read()
-    total = len(data)
-
-    N = int(len(data)/window_step)
-    X = np.zeros(shape=(N, window_size), dtype='uint8')
-    y = np.zeros(shape=(N, 1), dtype='uint8')
-
-    print(len(data), 'bytes')
-
-    space = " " * 5
-    data_ix = 0
-    for i in range(N):
-        chunk = data[data_ix:data_ix+window_size]
-        # print(chunk.replace('\n', '\\n'))
-
-        y[i] = 1 if "\n" in chunk else 0
-        # print('y[', i, '] =', y[i])
-
-        for j in range(window_size):
-
-            if j >= len(chunk):
-                break
-
-            c = chunk[j]
-
-            if c == "\n":
-                c = " "
-
-            o = ord(c)
-            # print('i', i, 'j', j, 'o', o, 'data_ix', data_ix)
-            X[i][j] = o
-
-        data_ix += window_step
-
-        if data_ix % 100000 == 0:
-            done = (float(data_ix) / total) * 100
-            print("Completed: %0.3f%%%s" % (done, space), end='\r')
-
-    f.close()
-
-    return X, y
+multiclass = False
+# multiclass = True
+window_size = 56
+window_step = 4
+batch_size = 1
+lstm_size = 5480
+embedding_size = 105
+epochs = 1
 
 
-X, y = Xy(text_file)
+if __name__ == "__main__":
+    try:
+        model_file = sys.argv[1]
+        text_file = sys.argv[2]
+    except IndexError:
+        print('USAGE: ./validate.py [model_file.h5] [text_file.txt]')
+        sys.exit(1)
+    else:
+        print('Using model', model_file, 'and text corpus', text_file)
 
-print('Loading model...')
-model = load_model(model_file)
+    larger_class, remove_items, N = precompute(
+        filename=text_file,
+        multiclass=multiclass,
+        balance=False,
+        window_step=window_step,
+        window_size=window_size
+    )
 
-print('Running...')
-score, acc = model.evaluate(
-    X, y,
-    batch_size=batch_size
-)
+    data_generator = gen_training_data(
+        filename=text_file,
+        multiclass=multiclass,
+        balance=False,
+        larger_class=None,
+        remove_items=0,
+        N=N,
+        window_step=window_step,
+        window_size=window_size,
+        batch_size=batch_size
+    )
 
-print('Validate score:', score)
-print('Validate accuracy:', acc)
+    print('Loading model...')
+    model = load_model(model_file)
+
+    print('Running...')
+    score, acc = model.evaluate_generator(
+        batch_data,
+        num_steps=N/batch_size
+    )
+
+    print('Validate score:', score)
+    print('Validate accuracy:', acc)

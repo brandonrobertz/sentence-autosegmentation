@@ -39,6 +39,7 @@ import os
 import random
 
 from load_data import precompute, gen_training_data
+from models import binary_model, multiclass_model
 
 
 # window sizes in chars
@@ -57,51 +58,6 @@ def modelname(embedding, lstm, val_acc, multiclass):
     return '{}_{}_{}_{}_{}.h5'.format(
         'multiclass' if multiclass else 'binary',
         embedding, lstm, val_acc, int(now))
-
-
-def binary_model():
-    print('Building model...')
-    model = Sequential()
-    # 256 character-space (ascii only)
-    # best was lstm 2000, embedding 200
-    model.add(Embedding(
-        128, embedding_size, input_length=window_size
-    ))
-    model.add(LSTM(
-        lstm_size,
-        dropout=0.2, recurrent_dropout=0.2
-    ))
-    # model.add(Dense(
-        # 200,
-        # activation='sigmoid',
-        # kernel_regularizer='l1_l2',
-        # activity_regularizer='l1_l2'
-    # ))
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(loss='binary_crossentropy',
-                optimizer='adam', #Adam(lr=0.001),
-                metrics=['binary_accuracy'])
-    print( '-' * 20, 'Binary Model', '-' * 20)
-    print(ascii(model))
-    return model
-
-
-def multiclass_model():
-    print('Building model...')
-    model = Sequential()
-    # 256 character-space (ascii only)
-    model.add(Embedding(
-        128, embedding_size, input_length=window_size
-    ))
-    model.add(LSTM(
-        2000, dropout=0.2, recurrent_dropout=0.2
-    ))
-    model.add(Dense(window_size, activation='sigmoid'))
-    model.compile(loss='categorical_crossentropy',
-                optimizer='adam',
-                metrics=['categorical_accuracy'])
-    print(ascii(model))
-    return model
 
 
 if __name__ == "__main__":
@@ -132,7 +88,6 @@ if __name__ == "__main__":
     if multiclass:
         model = multiclass_model()
     else:
-        # model = binary_model_conv_lstm() # binary_model()
         model = binary_model()
 
     print('Building model...')
