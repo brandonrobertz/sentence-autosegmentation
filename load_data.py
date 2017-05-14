@@ -5,7 +5,11 @@ import numpy as np
 import random
 
 
-def precompute(filename=None, multiclass=False, balance=True):
+def precompute(filename=None,
+               multiclass=False,
+               balance=True,
+               window_step=None,
+               window_size=None):
     """
     Precompute some data that we need in order to lazy batch our data from
     disk directly into our model. Returns (larger_class, remove_items, N)
@@ -54,6 +58,14 @@ def precompute(filename=None, multiclass=False, balance=True):
         if larger_class is not None:
             print("R\t", remove_items)
             print("C\t", larger_class)
+    else:
+        text = f.read(window_step)
+        while True:
+            # chunk = data[data_ix:data_ix+window_size]
+            chunk = f.read(window_step)
+            if not chunk:
+                break
+            N += 1
 
     print("N total windows", N)
 
@@ -76,8 +88,14 @@ def precompute(filename=None, multiclass=False, balance=True):
     return larger_class, remove_items, N
 
 
-def gen_training_data(filename=None, multiclass=False, balance=True,
-                      larger_class=None, remove_items=0, N=0):
+def gen_training_data(filename=None,
+                      multiclass=False,
+                      balance=True,
+                      larger_class=None,
+                      remove_items=0, N=0,
+                      window_step=None,
+                      window_size=None,
+                      batch_size=None):
     # NOTE: this only works with balance set to True
     print('Loading data...')
 
@@ -131,7 +149,7 @@ def gen_training_data(filename=None, multiclass=False, balance=True,
             # do balancing randomly so we get a better mix of classes
             if balance and str(y_value) == larger_class and remove_items > 0:
                 # spread the downsampling out across the whole dataset
-                if (random.random() * N) < (N / 2):
+                if (random.random() * N) > (N / 3.0):
                     remove_items -= 1
                     if remove_items == 0:
                         print("Classes balanced at", i)

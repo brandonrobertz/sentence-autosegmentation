@@ -46,11 +46,10 @@ multiclass = False
 # multiclass = True
 window_size = 56
 window_step = 4
-batch_size = 100
-lstm_size = 5880
+batch_size = 1
+lstm_size = 5480
 embedding_size = 105
-epochs = 20
-
+epochs = 1
 
 
 def modelname(embedding, lstm, val_acc, multiclass):
@@ -107,18 +106,25 @@ def multiclass_model():
 
 if __name__ == "__main__":
     larger_class, remove_items, N = precompute(
+        filename=sys.argv[1],
         multiclass=multiclass,
-        balance=not multiclass
+        balance=not multiclass,
+        window_size=window_size,
+        window_step=window_step
     )
     batch_generator = gen_training_data(
+        filename=sys.argv[1],
         multiclass=multiclass,
         balance=not multiclass,
         larger_class=larger_class,
         remove_items=remove_items,
-        N=N
+        N=N,
+        window_size=window_size,
+        window_step=window_step,
+        batch_size=batch_size
     )
-    # x_test,  y_test  = test( multiclass=multiclass, balance=not multiclass)
 
+    # x_test,  y_test  = test( multiclass=multiclass, balance=not multiclass)
     # print('x_train shape', x_train.shape, 'y_train shape', y_train.shape)
     # print('x_train[0]', x_train[0], 'shape', x_train[0].shape)
     # print('y_train[0]', y_train[0], 'shape', y_train[0].shape)
@@ -148,16 +154,34 @@ if __name__ == "__main__":
             batch_generator,
             epochs=1, #epochs,
             steps_per_epoch=N / batch_size,
-            callbacks=[tbCallback, checkpointCallback]
-        )
-        score, acc = model.evaluate(
-            x_test, y_test,
-            batch_size=batch_size
+            # callbacks=[tbCallback, checkpointCallback]
         )
 
-    print('Saving Keras model')
-    model.save(os.path.abspath('.') + '/models/' + modelname(
-        embedding_size, lstm_size, acc, multiclass))
+    # validate
+    larger_class, remove_items, N = precompute(
+        filename=sys.argv[2],
+        multiclass=multiclass,
+        balance=not multiclass,
+        window_size=window_size,
+        window_step=window_step
+    )
+    batch_generator = gen_training_data(
+        filename=sys.argv[2],
+        multiclass=multiclass,
+        balance=False,
+        N=N,
+        window_size=window_size,
+        window_step=window_step,
+        batch_size=batch_size
+    )
+    score, acc = model.evaluate_generator(
+        batch_generator,
+        steps=N / batch_size
+    )
+
+    name = modelname( embedding_size, lstm_size, acc, multiclass)
+    print('Saving Keras model', name)
+    model.save(os.path.abspath('.') + '/models/' + name)
 
     print('\n', '+' * 20, 'Results', '+' * 20)
     print(ascii(model))
